@@ -1,0 +1,17 @@
+{
+  "name": "Compras y Ventas SII",
+  "short_name": "SII Dashboard",
+  "description": "Ventas, compras, IVA y documentos del Registro de Compras y Ventas del SII.",
+  "lang": "es-CL",
+  "start_url": "/#resumen",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f8f7",
+  "theme_color": "#1f6f5c",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
