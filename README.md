@@ -4,9 +4,13 @@ Dashboard para el gerente basado en el **Registro de Compras y Ventas (RCV)** de
 
 ## Funciones
 
-- **Subir archivos**: arrastrar o elegir varios CSV del RCV. Detecta solo si son de Ventas o Compras, quita documentos duplicados y acepta archivos en UTF-8 o Windows-1252.
+- **Subir archivos** con proceso ETL: arrastrar o elegir varios CSV del RCV, revisarlos y confirmar la carga.
+  - *Extracción*: UTF-8 o Windows-1252, separador `;` o `,`, encabezado aunque venga después de líneas de título.
+  - *Validación por fila*: fecha válida, tipo de documento, RUT con dígito verificador, folio, total vacío o menor que neto + exento + IVA, fechas futuras, filas incompletas, filas de totales.
+  - *Reporte*: filas listas, con advertencia, descartadas y duplicadas omitidas, con número de fila y motivo; se puede descargar o copiar.
+  - *Carga*: solo después de confirmar; las filas con error se descartan y las advertencias se cargan.
 - **Resumen**: ventas, compras, balance e IVA a pagar con variación vs el período anterior; gráfico ventas vs compras; composición por tipo de documento; top 5 clientes y proveedores.
-- **Comparar meses**: Mes A vs Mes B por tipo de documento, con gráfico y tabla de variación %.
+- **Comparar**: período izquierdo vs derecho, lado a lado (día, mes, trimestre o año). Las mismas cifras quedan alineadas en ambos lados y la derecha muestra la variación % y en pesos; incluye ventas por tipo de documento y principales clientes con escala compartida, botón para intercambiar lados, gráfico y tabla por tipo.
 - **Documentos**: búsqueda por razón social, RUT o folio, filtro por flujo y orden por columnas.
 - Pensado para **tablet** (vertical y horizontal): botones táctiles grandes, pestañas fijas arriba y se puede instalar en la pantalla de inicio.
 
@@ -23,7 +27,7 @@ Tipos de documento: 33 factura electrónica, 34 factura exenta, 39 boleta electr
 
 ## Datos
 
-Los CSV se procesan **en el navegador**; no se envían a ningún servidor. Al recargar la página hay que volver a subirlos. En `ejemplos/` hay dos CSV de muestra con el formato del RCV (empresas y RUT ficticios).
+Los CSV se procesan **en el navegador**; no se envían a ningún servidor. Al recargar la página hay que volver a subirlos. En `ejemplos/` hay CSV de muestra con el formato del RCV (empresas y RUT ficticios), incluido `RCV_con_errores_muestra.csv` para probar la validación.
 
 ## Correr en local
 

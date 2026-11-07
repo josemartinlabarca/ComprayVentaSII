@@ -1,0 +1,10 @@
+Nro;Tipo Doc;Tipo Venta;Rut cliente;Razon Social;Folio;Fecha Docto;Fecha Recepcion;Fecha Acuse Recibo;Fecha Reclamo;Monto Exento;Monto Neto;Monto IVA;Monto total
+1;33;Del Giro;77204653-7;Importadora Valle Central Ltda.;1001;01/01/2025;01/01/2025 15:22:00;;;0;424496;80654;505150
+2;33;Del Giro;76174031-8;Inversiones Austral SpA;1002;01/01/2025;01/01/2025 15:22:00;;;0;1192730;226619;1419349
+3;33;Del Giro;77401350-4;Distribuidora Valle Central S.A.;1003;01/01/2025;01/01/2025 15:22:00;;;0;1045466;198639;1244105
+4;33;Del Giro;77115098-5;Transportes Maipo Ltda.;1004;01/01/2025;01/01/2025 15:22:00;;;0;179590;34122;213712
+5;33;Del Giro;77957209-9;Agrícola Biobío SpA;1005;01/01/2025;01/01/2025 15:22:00;;;0;172070;32693;204763
+9001;33;Del Giro;77204653-1;Cliente Malo SpA;5555;;06/11/2026 10:00:00;;;0;100000;19000;119000
+9002;99;Del Giro;77204653-7;Importadora Valle Central Ltda.;5556;05/11/2026;05/11/2026 10:00:00;;;0;100000;19000;50000
+9003;33;Del Giro;77204653-7
+2;33;Del Giro;76174031-8;Inversiones Austral SpA;1002;01/01/2025;01/01/2025 15:22:00;;;0;1192730;226619;1419349

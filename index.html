@@ -113,6 +113,31 @@ th[aria-sort="descending"] .sortbtn::after { content: " ↓"; opacity: 1; }
 .msg.ok { border-color: color-mix(in srgb, var(--good) 50%, transparent); color: var(--good); }
 .mini { font-size: .9rem; color: var(--muted); }
 
+/* ---- Comparación lado a lado ---- */
+.versus { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 560px) { .versus { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.side { border-top: 4px solid var(--muted); }
+.side.b { border-top-color: var(--accent); }
+.side .form-select { font-family: var(--font-display); font-size: 1.35rem; min-height: 52px; }
+.side-tag { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.vs-list { display: grid; margin: 0; }
+.vs-row { display: grid; gap: .1rem; padding-block: .7rem; border-bottom: 1px solid var(--line); min-height: 5.6rem; align-content: start; }
+.vs-row:last-child { border-bottom: 0; }
+.vs-row dt { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.vs-row dd { margin: 0; font-family: var(--font-display); font-size: clamp(1.35rem, 1.05rem + 1vw, 1.95rem); font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
+.vs-row .delta { font-family: var(--font-body); font-size: .92rem; }
+.vs-row .base { color: var(--muted); font-size: .92rem; }
+.side h3 { font-size: 1rem; font-weight: 600; margin: .5rem 0 0; }
+.etl { display: grid; gap: .75rem; }
+.etl-file { display: grid; gap: .4rem; padding: .75rem 0; border-bottom: 1px solid var(--line); }
+.etl-file:last-child { border-bottom: 0; }
+.etl-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.etl-chips span { border-radius: 999px; padding: .15rem .7rem; font-size: .9rem; border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.etl-chips .c-ok { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.etl-chips .c-adv { color: var(--compra); border-color: color-mix(in srgb, var(--compra) 45%, transparent); }
+.etl-chips .c-err { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.lvl-adv { color: var(--compra); font-weight: 500; } .lvl-err { color: var(--bad); font-weight: 500; }
+
 /* ---- Táctil y tablet ---- */
 html { -webkit-text-size-adjust: 100%; }
 body { -webkit-tap-highlight-color: transparent; }
@@ -192,6 +217,22 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
             <input type="file" id="fileInput" accept=".csv,.txt,text/csv" multiple hidden>
           </label>
           <div id="uploadMsg" class="msg" hidden></div>
+          <div class="card" id="etlCard" hidden><div class="card-body etl">
+            <h2>Revisión antes de cargar</h2>
+            <p class="note">Cada fila pasa por validación: fecha, tipo de documento, RUT, montos y duplicados. Las filas con error se descartan; las advertencias se cargan igual.</p>
+            <div id="etlFiles"></div>
+            <div class="tablewrap" id="etlIssuesWrap" style="max-height:18rem"><table class="table">
+              <thead><tr><th>Archivo</th><th class="num">Fila</th><th>Nivel</th><th>Motivo</th></tr></thead>
+              <tbody id="etlIssues"></tbody>
+            </table></div>
+            <p class="mini" id="etlMore" hidden></p>
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-accent" id="btnEtlOk" type="button">Cargar documentos</button>
+              <button class="btn btn-line" id="btnEtlNo" type="button">Descartar</button>
+              <button class="btn btn-line" id="btnEtlCsv" type="button">Descargar problemas (CSV)</button>
+              <button class="btn btn-line" id="btnEtlCopy" type="button">Copiar problemas</button>
+            </div>
+          </div></div>
           <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-line" id="btnSample" type="button">Usar datos de muestra</button>
             <button class="btn btn-line" id="btnClear" type="button">Quitar todos los archivos</button>
@@ -212,7 +253,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
         <h2>Archivos cargados</h2>
         <div class="tablewrap" style="max-height:none">
           <table class="table table-hover">
-            <thead><tr><th>Archivo</th><th>Tipo</th><th class="num">Documentos</th><th>Período</th><th></th></tr></thead>
+            <thead><tr><th>Archivo</th><th>Tipo</th><th class="num">Documentos</th><th class="num">Advertencias</th><th class="num">Descartadas</th><th>Período</th><th></th></tr></thead>
             <tbody id="filesBody"></tbody>
           </table>
         </div>
@@ -266,23 +307,43 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     <section class="tab-pane fade" id="comparar" role="tabpanel" aria-labelledby="t-comparar">
       <div style="display:grid;gap:1rem">
         <div class="filters">
-          <div><label class="form-label" for="mA">Mes A</label><select class="form-select" id="mA"></select></div>
-          <div><label class="form-label" for="mB">Mes B</label><select class="form-select" id="mB"></select></div>
-          <div class="btn-group" role="group" aria-label="Flujo a graficar">
-            <input type="radio" class="btn-check" name="cmpF" id="cmpV" value="venta" checked><label class="btn btn-line" for="cmpV">Ventas</label>
-            <input type="radio" class="btn-check" name="cmpF" id="cmpC" value="compra"><label class="btn btn-line" for="cmpC">Compras</label>
-          </div>
+          <div><label class="form-label" for="cGran">Comparar por</label>
+            <select class="form-select" id="cGran"><option value="dia">Día</option><option value="mes" selected>Mes</option><option value="trimestre">Trimestre</option><option value="anio">Año</option></select></div>
+          <div><label class="form-label" for="cTipo">Tipo de documento</label>
+            <select class="form-select" id="cTipo"><option value="Todos">Todos</option><option value="33">33 · Factura electrónica</option><option value="34">34 · Factura exenta</option><option value="39">39 · Boleta electrónica</option><option value="46">46 · Factura de compra</option><option value="56">56 · Nota de débito</option><option value="61">61 · Nota de crédito</option></select></div>
+          <button class="btn btn-line" id="btnSwap" type="button">⇄ Intercambiar lados</button>
         </div>
-        <div class="kpis" id="cmpKpis"></div>
+        <div class="versus">
+          <div class="card side a"><div class="card-body">
+            <div class="side-tag"><span class="eyebrow">Izquierda</span><span class="mini">base de comparación</span></div>
+            <select class="form-select" id="mA" aria-label="Período izquierdo"></select>
+            <dl class="vs-list" id="vsA"></dl>
+            <h3>Ventas por tipo de documento</h3><ul class="toplist" id="vsTipoA"></ul>
+            <h3>Principales clientes</h3><ul class="toplist" id="vsTopA"></ul>
+          </div></div>
+          <div class="card side b"><div class="card-body">
+            <div class="side-tag"><span class="eyebrow">Derecha</span><span class="mini">variación vs izquierda</span></div>
+            <select class="form-select" id="mB" aria-label="Período derecho"></select>
+            <dl class="vs-list" id="vsB"></dl>
+            <h3>Ventas por tipo de documento</h3><ul class="toplist" id="vsTipoB"></ul>
+            <h3>Principales clientes</h3><ul class="toplist" id="vsTopB"></ul>
+          </div></div>
+        </div>
         <div class="card"><div class="card-body">
-          <h2 id="cmpTitle">Mes A vs Mes B</h2>
-          <ul class="legend"><li><span class="sw" id="swA"></span><span id="lgA">Mes A</span></li><li><span class="sw" id="swB"></span><span id="lgB">Mes B</span></li></ul>
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 id="cmpTitle">Izquierda vs derecha</h2>
+            <div class="btn-group" role="group" aria-label="Flujo a graficar">
+              <input type="radio" class="btn-check" name="cmpF" id="cmpV" value="venta" checked><label class="btn btn-line btn-sm" for="cmpV">Ventas</label>
+              <input type="radio" class="btn-check" name="cmpF" id="cmpC" value="compra"><label class="btn btn-line btn-sm" for="cmpC">Compras</label>
+            </div>
+          </div>
+          <ul class="legend"><li><span class="sw" id="swA"></span><span id="lgA">Izquierda</span></li><li><span class="sw" id="swB"></span><span id="lgB">Derecha</span></li></ul>
           <div class="chartbox" style="height:340px"><canvas id="cCmp" aria-label="Comparación por tipo de documento"></canvas></div>
         </div></div>
         <div class="card"><div class="card-body">
           <h2>Detalle por tipo de documento</h2>
           <div class="tablewrap"><table class="table table-hover">
-            <thead><tr><th>Documento</th><th class="num">Ventas A</th><th class="num">Ventas B</th><th class="num">Var.</th><th class="num">Compras A</th><th class="num">Compras B</th><th class="num">Var.</th></tr></thead>
+            <thead><tr><th>Documento</th><th class="num" id="thVA">Ventas izq.</th><th class="num" id="thVB">Ventas der.</th><th class="num">Var.</th><th class="num" id="thCA">Compras izq.</th><th class="num" id="thCB">Compras der.</th><th class="num">Var.</th></tr></thead>
             <tbody id="cmpBody"></tbody>
           </table></div>
         </div></div>
@@ -323,51 +384,101 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
   const compact = new Intl.NumberFormat('es-CL', { notation: 'compact', maximumFractionDigits: 1 });
   const pctF = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1, minimumFractionDigits: 1, signDisplay: 'always' });
-  const S = { files: [], docs: [], gran: 'mes', periodo: null, tipo: 'Todos', mix: 'venta', mesA: null, mesB: null, cmpF: 'venta', q: '', dFlujo: 'todos', sort: { k: 'fecha', dir: -1 }, sample: false };
+  const S = { files: [], docs: [], gran: 'mes', periodo: null, tipo: 'Todos', mix: 'venta', cGran: 'mes', cTipo: 'Todos', perA: null, perB: null, cmpF: 'venta', pending: null, q: '', dFlujo: 'todos', sort: { k: 'fecha', dir: -1 }, sample: false };
   let AGG = {};
 
   // ---------- Lectura de CSV ----------
   const splitLine = (l, d) => { const out = []; let cur = '', q = false; for (const ch of l) { if (ch === '"') { q = !q; continue; } if (ch === d && !q) { out.push(cur.trim()); cur = ''; } else cur += ch; } out.push(cur.trim()); return out; };
   const num = (s) => Number(String(s || '0').replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
   const fecha = (s) => { const m = String(s).match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/); if (m) return `${m[3]}-${m[2]}-${m[1]}`; const n = String(s).match(/\d{4}-\d{2}-\d{2}/); return n ? n[0] : null; };
+  const dvOf = (n) => { let s = 0, m = 2; for (const ch of String(n).split('').reverse()) { s += +ch * m; m = m === 7 ? 2 : m + 1; } const r = 11 - (s % 11); return r === 10 ? 'K' : r === 11 ? '0' : String(r); };
+  const rutOk = (r) => { const m = String(r).replace(/\./g, '').trim().toUpperCase().match(/^(\d{1,8})-([\dK])$/); return !!m && dvOf(+m[1]) === m[2]; };
+  // Extrae, valida y transforma un CSV del RCV. Devuelve documentos válidos y la lista de problemas por fila.
   function parseRcv(text, name) {
-    const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
-    if (lines.length < 2) throw new Error(`${name}: el archivo está vacío o no tiene documentos.`);
-    const d = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ';' : ',';
-    const head = splitLine(lines[0], d).map((h) => h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
+    const lines = text.replace(/^﻿/, '').split(/\r?\n/);
+    const hi = lines.findIndex((l) => /tipo doc/i.test(l));
+    if (hi < 0 || lines.slice(hi + 1).every((l) => !l.trim())) throw new Error(`${name}: el archivo está vacío o no tiene el encabezado del RCV (falta la columna «Tipo Doc»).`);
+    const d = (lines[hi].match(/;/g) || []).length >= (lines[hi].match(/,/g) || []).length ? ';' : ',';
+    const head = splitLine(lines[hi], d).map((h) => h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' '));
     const find = (re) => head.findIndex((h) => re.test(h));
     let flujo = null;
     if (find(/rut proveedor/) >= 0 || find(/iva recuperable/) >= 0) flujo = 'compra';
     else if (find(/rut cliente/) >= 0) flujo = 'venta';
     if (!flujo) throw new Error(`${name}: no reconocí las columnas del RCV. Sube el CSV de detalle de Ventas o de Compras tal como lo descarga el SII.`);
-    const ix = { tipo: find(/^tipo doc/), rut: find(/^rut/), nombre: find(/razon social/), folio: find(/^folio/), fecha: find(/^fecha docto/), total: find(/^monto total/), iva: flujo === 'venta' ? find(/^monto iva$/) : find(/^monto iva recuperable/) };
-    if (ix.tipo < 0 || ix.fecha < 0 || ix.total < 0) throw new Error(`${name}: faltan columnas clave (Tipo Doc, Fecha Docto o Monto Total).`);
-    const docs = [];
-    for (const l of lines.slice(1)) {
-      const c = splitLine(l, d); const f = fecha(c[ix.fecha]); if (!f) continue;
-      const tipo = String(num(c[ix.tipo])); const s = tipo === '61' ? -1 : 1;
-      docs.push({ flujo, tipo, rut: c[ix.rut] || '', nombre: c[ix.nombre] || '', folio: c[ix.folio] || '', fecha: f, iva: s * num(ix.iva >= 0 ? c[ix.iva] : 0), total: s * num(c[ix.total]) });
-    }
-    if (!docs.length) throw new Error(`${name}: no encontré documentos con fecha válida.`);
-    return { flujo, docs };
+    const ix = { tipo: find(/^tipo doc/), rut: find(/^rut/), nombre: find(/razon social/), folio: find(/^folio/), fecha: find(/^fecha docto/), total: find(/^monto total/), neto: find(/^monto neto$/), exento: find(/^monto exento$/), iva: flujo === 'venta' ? find(/^monto iva$/) : find(/^monto iva recuperable/) };
+    const faltan = [['Tipo Doc', ix.tipo], ['Fecha Docto', ix.fecha], ['Monto Total', ix.total]].filter(([, i]) => i < 0).map(([n]) => n);
+    if (faltan.length) throw new Error(`${name}: faltan columnas clave (${faltan.join(', ')}).`);
+    const docs = [], issues = []; let filas = 0, adv = 0, err = 0;
+    const issue = (fila, nivel, motivo) => { if (issues.length < 1000) issues.push({ archivo: name, fila, nivel, motivo }); };
+    lines.forEach((l, k) => {
+      if (k <= hi || !l.trim()) return;
+      filas++; const fila = k + 1; const c = splitLine(l, d);
+      if (c.length < Math.min(head.length, 6)) { err++; issue(fila, 'error', `Fila incompleta (${c.length} de ${head.length} columnas); se descarta.`); return; }
+      if (/^total/i.test(c[0] || '') || /^total/i.test(c[ix.tipo] || '')) { filas--; return; }
+      const f = fecha(c[ix.fecha]);
+      if (!f) { err++; issue(fila, 'error', `Fecha Docto vacía o inválida («${c[ix.fecha] || ''}»); se descarta.`); return; }
+      const tipo = String(num(c[ix.tipo]));
+      if (!tipo || tipo === '0') { err++; issue(fila, 'error', `Tipo Doc vacío o inválido («${c[ix.tipo] || ''}»); se descarta.`); return; }
+      let warn = false; const w = (m) => { warn = true; issue(fila, 'advertencia', m); };
+      if (!TIPOS[tipo]) w(`Tipo de documento ${tipo} no reconocido; se carga igual.`);
+      const rut = ix.rut >= 0 ? (c[ix.rut] || '').trim() : '';
+      if (!rut) w('RUT vacío.'); else if (rut !== '66666666-6' && !rutOk(rut)) w(`RUT ${rut} con dígito verificador inválido.`);
+      if (ix.folio >= 0 && !(c[ix.folio] || '').trim()) w('Folio vacío; no se puede revisar si está duplicado.');
+      if (!(c[ix.total] || '').trim()) w('Monto Total vacío; se toma como $0.');
+      const total = num(c[ix.total]), parts = (ix.neto >= 0 ? num(c[ix.neto]) : 0) + (ix.exento >= 0 ? num(c[ix.exento]) : 0) + (ix.iva >= 0 ? num(c[ix.iva]) : 0);
+      if (ix.neto >= 0 && total + 1 < parts) w(`Monto Total (${clp.format(total)}) menor que neto + exento + IVA (${clp.format(parts)}).`);
+      if (f > new Date().toISOString().slice(0, 10)) w(`Fecha futura (${f}).`);
+      if (warn) adv++;
+      const s = tipo === '61' ? -1 : 1;
+      docs.push({ flujo, tipo, rut, nombre: ix.nombre >= 0 ? c[ix.nombre] || '' : '', folio: ix.folio >= 0 ? (c[ix.folio] || '').trim() : '', fecha: f, iva: s * num(ix.iva >= 0 ? c[ix.iva] : 0), total: s * total });
+    });
+    if (!docs.length) throw new Error(`${name}: ninguna fila pasó la validación (${err} con error).`);
+    return { flujo, docs, issues, stats: { filas, ok: docs.length - adv, adv, err } };
   }
   const readFile = (file, enc) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsText(file, enc); });
 
   async function addFiles(list) {
-    const ok = [], errs = [];
-    if (S.sample) { S.files = []; S.sample = false; }
+    const pend = [], errs = [];
     for (const file of list) {
       try {
         let text = await readFile(file, 'utf-8');
         if (text.includes(String.fromCharCode(0xFFFD))) text = await readFile(file, 'windows-1252');
         const p = parseRcv(text, file.name);
-        S.files.push({ name: file.name, flujo: p.flujo, docs: p.docs });
-        ok.push(file.name);
+        // duplicados contra lo ya cargado y entre los archivos nuevos
+        const have = new Set((S.sample ? [] : S.files).flatMap((f) => f.docs).concat(pend.flatMap((x) => x.docs)).filter((x) => x.folio).map(dkey));
+        const own = new Set(); let dup = 0;
+        p.docs = p.docs.filter((x) => { if (!x.folio) return true; const k = dkey(x); if (have.has(k) || own.has(k)) { dup++; return false; } own.add(k); return true; });
+        pend.push({ name: file.name, flujo: p.flujo, docs: p.docs, issues: p.issues, stats: Object.assign(p.stats, { dup }) });
       } catch (e) { errs.push(e.message || String(e)); }
     }
-    showMsg(errs.length ? 'err' : 'ok', [ok.length ? `Cargado${ok.length > 1 ? 's' : ''}: ${ok.join(', ')}.` : '', ...errs].filter(Boolean).join(' '));
-    rebuild(true);
+    showMsg(errs.length ? 'err' : '', errs.join(' '));
+    S.pending = pend.length ? pend : null;
+    renderEtl();
   }
+  const dkey = (x) => `${x.flujo}|${x.tipo}|${x.rut}|${x.folio}`;
+  function renderEtl() {
+    const card = $('etlCard'), P = S.pending; card.hidden = !P; if (!P) return;
+    const fe = (txt, cls) => { const e = document.createElement('span'); e.textContent = txt; if (cls) e.className = cls; return e; };
+    $('etlFiles').replaceChildren(...P.map((p) => {
+      const ds = p.docs.map((x) => x.fecha).sort(); const box = document.createElement('div'); box.className = 'etl-file';
+      const t = document.createElement('div'); t.className = 'd-flex flex-wrap align-items-center gap-2';
+      const pill = fe(p.flujo === 'venta' ? 'Ventas' : 'Compras', 'pill ' + p.flujo); const nm = document.createElement('b'); nm.textContent = p.name;
+      t.append(pill, nm, fe(ds.length ? `${label('dia', ds[0])} – ${label('dia', ds[ds.length - 1])}` : '', 'mini'));
+      const ch = document.createElement('div'); ch.className = 'etl-chips';
+      const n = (v) => v.toLocaleString('es-CL');
+      ch.append(fe(`✓ ${n(p.stats.ok)} listas`, 'c-ok'), fe(`⚠ ${n(p.stats.adv)} con advertencia`, 'c-adv'), fe(`✕ ${n(p.stats.err)} descartadas`, 'c-err'), fe(`⧉ ${n(p.stats.dup)} duplicadas omitidas`));
+      box.append(t, ch); return box;
+    }));
+    const all = P.flatMap((p) => p.issues).sort((a, b) => (a.nivel === b.nivel ? 0 : a.nivel === 'error' ? -1 : 1));
+    const shown = all.slice(0, 200);
+    $('etlIssuesWrap').hidden = !all.length;
+    $('etlIssues').replaceChildren(...shown.map((i) => { const tr = document.createElement('tr'); const td = (x, c) => { const e = document.createElement('td'); e.textContent = x; if (c) e.className = c; return e; }; tr.append(td(i.archivo), td(String(i.fila), 'num'), td(i.nivel === 'error' ? 'Error' : 'Advertencia', i.nivel === 'error' ? 'lvl-err' : 'lvl-adv'), td(i.motivo)); tr.lastChild.style.whiteSpace = 'normal'; return tr; }));
+    $('etlMore').hidden = all.length <= shown.length; $('etlMore').textContent = `Se muestran ${shown.length} de ${all.length} problemas. Descarga el CSV para ver todos.`;
+    const total = P.reduce((a, p) => a + p.docs.length, 0);
+    $('btnEtlOk').textContent = `Cargar ${total.toLocaleString('es-CL')} documentos`;
+    $('btnEtlCsv').hidden = $('btnEtlCopy').hidden = !all.length;
+  }
+  const issuesCsv = () => ['Archivo;Fila;Nivel;Motivo', ...(S.pending || []).flatMap((p) => p.issues).map((i) => [i.archivo, i.fila, i.nivel, i.motivo].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'))].join('\n');
   function showMsg(kind, text) { const m = $('uploadMsg'); m.className = 'msg ' + kind; m.textContent = text; m.hidden = !text; }
 
   // ---------- Datos de muestra ----------
@@ -420,15 +531,18 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   const val = (g, p, flujo, t) => (AGG[g]?.map.get(p)?.[flujo]?.[t]) || z;
   const vp = (a, b) => (b ? ((a - b) / Math.abs(b)) * 100 : null);
 
+  function setCmpDefaults(force) {
+    const ps = AGG[S.cGran]?.periods || [];
+    if (force || !ps.includes(S.perB)) S.perB = ps[ps.length - 1] || null;
+    if (force || !ps.includes(S.perA)) S.perA = ps[ps.length - 2] || S.perB;
+  }
   function rebuild(resetPeriods) {
     const seen = new Set(); S.docs = [];
     for (const f of S.files) for (const d of f.docs) { const key = `${d.flujo}|${d.tipo}|${d.rut}|${d.folio}`; if (d.folio && seen.has(key)) continue; seen.add(key); S.docs.push(d); }
     aggregate();
     const per = AGG[S.gran]?.periods || [];
     if (resetPeriods || !per.includes(S.periodo)) S.periodo = per[per.length - 1] || null;
-    const meses = AGG.mes?.periods || [];
-    if (resetPeriods || !meses.includes(S.mesB)) S.mesB = meses[meses.length - 1] || null;
-    if (resetPeriods || !meses.includes(S.mesA)) S.mesA = meses[meses.length - 2] || S.mesB;
+    setCmpDefaults(resetPeriods);
     renderAll();
   }
 
@@ -497,30 +611,51 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   }
 
   function renderComparar() {
-    const meses = AGG.mes?.periods || [];
-    for (const [id, key] of [['mA', 'mesA'], ['mB', 'mesB']]) { $(id).replaceChildren(...[...meses].reverse().map((m) => new Option(label('mes', m), m))); $(id).value = S[key] || ''; }
-    const A = S.mesA, B = S.mesB, la = label('mes', A), lb = label('mes', B);
+    const g = S.cGran, ps = AGG[g]?.periods || [], T = S.cTipo;
+    $('cGran').value = g; $('cTipo').value = T;
+    for (const [id, key] of [['mA', 'perA'], ['mB', 'perB']]) { $(id).replaceChildren(...[...ps].reverse().map((p) => new Option(label(g, p), p))); $(id).value = S[key] || ''; }
+    const A = S.perA, B = S.perB, la = label(g, A), lb = label(g, B);
+    const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+    // Tarjetas alineadas: mismas filas a ambos lados
+    const metrics = (p) => { const v = val(g, p, 'venta', T), c = val(g, p, 'compra', T); return [
+      ['Ventas · salidas', v.total, true, clp], ['Compras · entradas', c.total, false, clp], ['Balance', v.total - c.total, true, clp],
+      ['IVA a pagar', v.iva - c.iva, false, clp], ['Documentos', v.n + c.n, true, { format: (x) => x.toLocaleString('es-CL') }]]; };
+    const mA = metrics(A), mB = metrics(B);
+    $('vsA').replaceChildren(...mA.map(([lbl, x, , f]) => { const r = el('div', 'vs-row'); r.append(el('dt', '', lbl), el('dd', '', f.format(x)), el('span', 'base', 'base')); return r; }));
+    $('vsB').replaceChildren(...mB.map(([lbl, x, upGood, f], i) => { const r = el('div', 'vs-row'); const dl = el('span', 'delta'); const diff = x - mA[i][1]; const v = vp(x, mA[i][1]);
+      dl.className = 'delta ' + (v == null || Math.abs(v) < .05 ? 'flat' : (v > 0) === upGood ? 'up' : 'down');
+      dl.textContent = v == null ? (diff ? `${diff > 0 ? '+' : ''}${f.format(diff)}` : 'sin cambio') : `${v > 0 ? '▲' : v < 0 ? '▼' : '■'} ${pctF.format(v)} % · ${diff > 0 ? '+' : ''}${f.format(diff)}`;
+      r.append(el('dt', '', lbl), el('dd', '', f.format(x)), dl); return r; }));
+    // Ventas por tipo con escala compartida entre ambos lados
+    const tiposV = TK.filter((t) => (T === 'Todos' || t === T) && (val(g, A, 'venta', t).n || val(g, B, 'venta', t).n));
+    const maxT = Math.max(1, ...tiposV.flatMap((t) => [Math.abs(val(g, A, 'venta', t).total), Math.abs(val(g, B, 'venta', t).total)]));
+    const tipoList = (p, ul) => ul.replaceChildren(...(tiposV.length ? tiposV.map((t) => { const x = val(g, p, 'venta', t).total; const li = el('li'); const b = el('div', 'bar'); const s = el('span'); s.style.width = Math.max(1, (Math.abs(x) / maxT) * 100) + '%'; s.style.background = `var(--t${t})`; b.append(s); li.append(el('span', 'name', `${t} · ${TIPOS[t]}`), el('span', 'amt', clp.format(x)), b); return li; }) : [el('li', 'mini', 'Sin ventas en este período.')]));
+    tipoList(A, $('vsTipoA')); tipoList(B, $('vsTipoB'));
+    const k = KEYS[g];
+    const topOf = (p) => { const m = new Map(); for (const d of S.docs) if (d.flujo === 'venta' && k(d.fecha) === p && (T === 'Todos' || d.tipo === T) && d.rut !== '66666666-6') { const e = m.get(d.rut) || { nombre: d.nombre, total: 0 }; e.total += d.total; m.set(d.rut, e); } return [...m.values()].sort((a, b) => b.total - a.total).slice(0, 3); };
+    const tA = topOf(A), tB = topOf(B), maxC = Math.max(1, ...tA.concat(tB).map((x) => x.total));
+    const topList = (arr, ul) => ul.replaceChildren(...(arr.length ? arr.map((x) => { const li = el('li'); const b = el('div', 'bar'); const s = el('span'); s.style.width = Math.max(1, (x.total / maxC) * 100) + '%'; s.style.background = 'var(--venta)'; b.append(s); li.append(el('span', 'name', x.nombre), el('span', 'amt', clp.format(x.total)), b); return li; }) : [el('li', 'mini', 'Sin clientes en este período.')]));
+    topList(tA, $('vsTopA')); topList(tB, $('vsTopB'));
+
+    // Gráfico y tabla por tipo
     $('cmpTitle').textContent = `${S.cmpF === 'venta' ? 'Ventas' : 'Compras'}: ${la} vs ${lb}`; $('lgA').textContent = la; $('lgB').textContent = lb;
+    $('thVA').textContent = `Ventas ${la}`; $('thVB').textContent = `Ventas ${lb}`; $('thCA').textContent = `Compras ${la}`; $('thCB').textContent = `Compras ${lb}`;
     const cA = css('--muted'), cB = css(S.cmpF === 'venta' ? '--venta' : '--compra'); $('swA').style.background = cA; $('swB').style.background = cB;
-    const card = (eyebrow, a, b, upGood) => { const v = vp(b, a); const d = document.createElement('div'); d.className = 'card kpi'; d.innerHTML = '<div class="card-body"><span class="eyebrow"></span><span class="val"></span><span class="delta"></span></div>'; d.querySelector('.eyebrow').textContent = eyebrow; d.querySelector('.val').textContent = clp.format(b); setDelta(d.querySelector('.delta'), v, upGood, `vs ${la}`); return d; };
-    const vA = val('mes', A, 'venta', 'Todos'), vB = val('mes', B, 'venta', 'Todos'), cAa = val('mes', A, 'compra', 'Todos'), cBb = val('mes', B, 'compra', 'Todos');
-    $('cmpKpis').replaceChildren(card(`Ventas ${lb}`, vA.total, vB.total, true), card(`Compras ${lb}`, cAa.total, cBb.total, false), card(`Balance ${lb}`, vA.total - cAa.total, vB.total - cBb.total, true), card(`IVA a pagar ${lb}`, vA.iva - cAa.iva, vB.iva - cBb.iva, false));
-    const tipos = TK.filter((t) => val('mes', A, S.cmpF, t).n || val('mes', B, S.cmpF, t).n);
+    const tipos = TK.filter((t) => val(g, A, S.cmpF, t).n || val(g, B, S.cmpF, t).n);
     const o = baseOpts({ indexAxis: 'y' }); o.scales.x.grid = { color: css('--line') }; o.scales.x.ticks.callback = (v) => compact.format(v); o.scales.y.grid = { display: false }; o.scales.y.ticks.callback = function (v) { return this.getLabelForValue(v); };
-    o.plugins.tooltip.callbacks.afterBody = (it) => { const t = tipos[it[0].dataIndex]; const v = vp(val('mes', B, S.cmpF, t).total, val('mes', A, S.cmpF, t).total); return v == null ? '' : `Variación: ${pctF.format(v)} %`; };
+    o.plugins.tooltip.callbacks.afterBody = (it) => { const t = tipos[it[0].dataIndex]; const v = vp(val(g, B, S.cmpF, t).total, val(g, A, S.cmpF, t).total); return v == null ? '' : `Variación: ${pctF.format(v)} %`; };
     chart('cCmp', 'bar', { labels: tipos.map((t) => `${t} ${TIPOS[t]}`), datasets: [
-      { label: la, data: tipos.map((t) => val('mes', A, S.cmpF, t).total), backgroundColor: cA, borderRadius: 3, maxBarThickness: 22 },
-      { label: lb, data: tipos.map((t) => val('mes', B, S.cmpF, t).total), backgroundColor: cB, borderRadius: 3, maxBarThickness: 22 },
+      { label: la, data: tipos.map((t) => val(g, A, S.cmpF, t).total), backgroundColor: cA, borderRadius: 3, maxBarThickness: 22 },
+      { label: lb, data: tipos.map((t) => val(g, B, S.cmpF, t).total), backgroundColor: cB, borderRadius: 3, maxBarThickness: 22 },
     ] }, o);
-    const td = (txt, cls) => { const e = document.createElement('td'); e.textContent = txt; if (cls) e.className = cls; return e; };
+    const td = (txt, cls) => el('td', cls, txt);
     const vtd = (v, upGood) => td(v == null ? '—' : `${pctF.format(v)} %`, 'num ' + (v == null || Math.abs(v) < .05 ? 'flat' : (v > 0) === upGood ? 'up' : 'down'));
-    const rows = [...TK.filter((t) => val('mes', A, 'venta', t).n + val('mes', B, 'venta', t).n + val('mes', A, 'compra', t).n + val('mes', B, 'compra', t).n), 'Todos'].map((t) => {
-      const va = val('mes', A, 'venta', t).total, vb = val('mes', B, 'venta', t).total, ca = val('mes', A, 'compra', t).total, cb = val('mes', B, 'compra', t).total;
+    $('cmpBody').replaceChildren(...[...TK.filter((t) => val(g, A, 'venta', t).n + val(g, B, 'venta', t).n + val(g, A, 'compra', t).n + val(g, B, 'compra', t).n), 'Todos'].map((t) => {
+      const va = val(g, A, 'venta', t).total, vb = val(g, B, 'venta', t).total, ca = val(g, A, 'compra', t).total, cb = val(g, B, 'compra', t).total;
       const tr = document.createElement('tr'); if (t === 'Todos') tr.className = 'total';
       tr.append(td(t === 'Todos' ? 'Total' : `${t} · ${TIPOS[t]}`), td(clp.format(va), 'num'), td(clp.format(vb), 'num'), vtd(vp(vb, va), true), td(clp.format(ca), 'num'), td(clp.format(cb), 'num'), vtd(vp(cb, ca), false));
       return tr;
-    });
-    $('cmpBody').replaceChildren(...rows);
+    }));
   }
 
   function renderDocs() {
@@ -548,9 +683,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       const ds = f.docs.map((d) => d.fecha).sort(); const tr = document.createElement('tr');
       const t = td(''); const pill = document.createElement('span'); pill.className = 'pill ' + f.flujo; pill.textContent = f.flujo === 'venta' ? 'Ventas' : 'Compras'; t.append(pill);
       const x = td('', 'num'); const b = document.createElement('button'); b.className = 'btn btn-line btn-sm'; b.type = 'button'; b.textContent = 'Quitar'; b.addEventListener('click', () => { S.files.splice(i, 1); if (!S.files.length) S.sample = false; rebuild(false); }); x.append(b);
-      tr.append(td(f.name), t, td(f.docs.length.toLocaleString('es-CL'), 'num'), td(`${label('dia', ds[0])} – ${label('dia', ds[ds.length - 1])}`), x);
+      tr.append(td(f.name), t, td(f.docs.length.toLocaleString('es-CL'), 'num'), td(f.stats ? f.stats.adv.toLocaleString('es-CL') : '—', 'num'), td(f.stats ? f.stats.err.toLocaleString('es-CL') : '—', 'num'), td(`${label('dia', ds[0])} – ${label('dia', ds[ds.length - 1])}`), x);
       return tr;
-    }) : [(() => { const tr = document.createElement('tr'); const c = td('Aún no hay archivos. Sube los CSV de Ventas y Compras del RCV o usa los datos de muestra.', 'mini'); c.colSpan = 5; tr.append(c); return tr; })()]));
+    }) : [(() => { const tr = document.createElement('tr'); const c = td('Aún no hay archivos. Sube los CSV de Ventas y Compras del RCV o usa los datos de muestra.', 'mini'); c.colSpan = 7; tr.append(c); return tr; })()]));
   }
 
   function renderAll() { renderFiles(); renderResumen(); renderComparar(); renderDocs(); }
@@ -561,8 +696,23 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   $('fTipo').addEventListener('change', (e) => { S.tipo = e.target.value; renderAll(); });
   document.querySelectorAll('input[name="mixF"]').forEach((r) => r.addEventListener('change', () => { S.mix = r.value; renderResumen(); }));
   document.querySelectorAll('input[name="cmpF"]').forEach((r) => r.addEventListener('change', () => { S.cmpF = r.value; renderComparar(); }));
-  $('mA').addEventListener('change', (e) => { S.mesA = e.target.value; renderComparar(); });
-  $('mB').addEventListener('change', (e) => { S.mesB = e.target.value; renderComparar(); });
+  $('mA').addEventListener('change', (e) => { S.perA = e.target.value; renderComparar(); });
+  $('mB').addEventListener('change', (e) => { S.perB = e.target.value; renderComparar(); });
+  $('cGran').addEventListener('change', (e) => { S.cGran = e.target.value; setCmpDefaults(true); renderComparar(); });
+  $('cTipo').addEventListener('change', (e) => { S.cTipo = e.target.value; renderComparar(); });
+  $('btnSwap').addEventListener('click', () => { [S.perA, S.perB] = [S.perB, S.perA]; renderComparar(); });
+  $('btnEtlOk').addEventListener('click', () => {
+    const P = S.pending; if (!P) return;
+    if (S.sample) { S.files = []; S.sample = false; }
+    S.files.push(...P.map((p) => ({ name: p.name, flujo: p.flujo, docs: p.docs, stats: p.stats })));
+    const n = P.reduce((a, p) => a + p.docs.length, 0), dup = P.reduce((a, p) => a + p.stats.dup, 0), err = P.reduce((a, p) => a + p.stats.err, 0);
+    S.pending = null; renderEtl();
+    showMsg('ok', `Cargados ${n.toLocaleString('es-CL')} documentos.${err ? ` Se descartaron ${err} filas con error.` : ''}${dup ? ` Se omitieron ${dup} duplicados.` : ''}`);
+    rebuild(true);
+  });
+  $('btnEtlNo').addEventListener('click', () => { S.pending = null; renderEtl(); showMsg('', ''); });
+  $('btnEtlCsv').addEventListener('click', () => { try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\uFEFF' + issuesCsv()], { type: 'text/csv;charset=utf-8' })); a.download = 'problemas-carga-rcv.csv'; document.body.append(a); a.click(); a.remove(); } catch (e) { showMsg('err', 'No se pudo descargar aquí. Usa Copiar problemas.'); } });
+  $('btnEtlCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(issuesCsv()); showMsg('ok', 'Problemas copiados. Pégalos en Excel o en un correo.'); } catch (e) { showMsg('err', 'No se pudo copiar. Usa Descargar problemas.'); } });
   $('q').addEventListener('input', (e) => { S.q = e.target.value; renderDocs(); });
   $('dFlujo').addEventListener('change', (e) => { S.dFlujo = e.target.value; renderDocs(); });
   document.querySelectorAll('#documentos th[data-k] .sortbtn').forEach((b) => b.addEventListener('click', () => { const k = b.parentElement.dataset.k; S.sort = { k, dir: S.sort.k === k ? -S.sort.dir : (k === 'nombre' ? 1 : -1) }; renderDocs(); }));
@@ -573,7 +723,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
   drop.addEventListener('drop', (e) => { const fs = [...(e.dataTransfer?.files || [])]; if (fs.length) addFiles(fs); });
   $('btnSample').addEventListener('click', () => { S.files = sample(); S.sample = true; showMsg('ok', 'Datos de muestra cargados.'); rebuild(true); });
-  $('btnClear').addEventListener('click', () => { S.files = []; S.sample = false; showMsg('', ''); rebuild(true); });
+  $('btnClear').addEventListener('click', () => { S.files = []; S.sample = false; S.pending = null; renderEtl(); showMsg('', ''); rebuild(true); });
 
   // Pestañas con enlace (#subir, #resumen, #comparar, #documentos)
   const TABS = ['subir', 'resumen', 'comparar', 'documentos'];
