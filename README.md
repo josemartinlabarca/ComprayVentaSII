@@ -1,6 +1,41 @@
 # ComprayVentaSII · Dashboard de Compras y Ventas SII
 
+**[Ver demo en vivo →](https://compraventasii.vercel.app)** (abre con datos de muestra)
+
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
+![Bootstrap](https://img.shields.io/badge/Bootstrap%205-7952B3?logo=bootstrap&logoColor=white)
+![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?logo=chartdotjs&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-instalable-5A0FC8?logo=pwa&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white)
+
 Dashboard para el gerente basado en el **Registro de Compras y Ventas (RCV)** del SII de Chile. Se suben los CSV de ventas y compras y se analizan por día, mes, trimestre o año, por tipo de documento, comparando meses.
+
+![Resumen del dashboard en tablet](docs/capturas/02-resumen.png)
+
+## Problema → Solución → Resultado
+
+| | |
+|---|---|
+| **Problema** | El SII entrega el Registro de Compras y Ventas como CSV sueltos por mes. Para ver ventas, compras e IVA por período o comparar dos meses hay que armarlo a mano en planillas, y una fila mala distorsiona los totales sin aviso. |
+| **Solución** | Una app web instalable en tablet: se arrastran los CSV del RCV, cada fila se valida antes de cargarse y las cifras quedan listas por período, tipo de documento y cliente o proveedor. |
+| **Resultado** | Ventas, compras, balance e IVA a pagar en una sola pantalla, comparación lado a lado entre períodos y un reporte de qué filas se descartaron y por qué. Los datos nunca salen del navegador. |
+
+<details>
+<summary><b>English summary</b></summary>
+
+Sales and purchases dashboard for SME managers in Chile, built on the tax authority's (SII) Purchase and Sales Registry exports. Users drop in CSV files; every row goes through an ETL validation step (dates, document types, Chilean tax IDs with check digit, amounts, duplicates) before loading. The app shows sales, purchases, balance and VAT payable by day, month, quarter or year, compares any two periods side by side, and runs as an installable tablet-first PWA. All processing happens in the browser; no data is sent to a server. Static site deployed on Vercel.
+
+</details>
+
+## Capturas
+
+| Validación antes de cargar | Comparar períodos |
+|---|---|
+| ![Reporte de validación ETL](docs/capturas/01-validacion-etl.png) | ![Comparación lado a lado](docs/capturas/03-comparar.png) |
+
+| Documentos |
+|---|
+| ![Búsqueda de documentos](docs/capturas/04-documentos.png) |
 
 ## Funciones
 
